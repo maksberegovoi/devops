@@ -5,6 +5,14 @@ terraform {
       source  = "hashicorp/aws"
       version = "~> 5.0"
     }
+    helm = {
+      source  = "hashicorp/helm"
+      version = "~> 2.12"
+    }
+    kubernetes = {
+      source  = "hashicorp/kubernetes"
+      version = "~> 2.26"
+    }
   }
 }
 
@@ -62,4 +70,13 @@ module "rds" {
     Environment = "lesson-8"
     ManagedBy   = "Terraform"
   }
+}
+
+module "jenkins" {
+  source = "./modules/jenkins"
+}
+
+module "argo_cd" {
+  source   = "./modules/argo_cd"
+  repo_url = "https://github.com/maxim/devops.git"
 }

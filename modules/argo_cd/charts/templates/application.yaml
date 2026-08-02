@@ -1,0 +1,22 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: django-app
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: {{ .Values.repositoryUrl }}
+    targetRevision: {{ .Values.targetRevision }}
+    path: {{ .Values.chartPath }}
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: {{ .Values.destinationNamespace }}
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

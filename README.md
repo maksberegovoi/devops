@@ -10,6 +10,9 @@ lesson-7/
 │   ├── vpc/                 # VPC with Public/Private subnets, IGW, NAT Gateway
 │   ├── ecr/                 # ECR repository with scan-on-push & lifecycle rules
 │   └── eks/                 # Amazon EKS Cluster + Managed Node Groups (t3.small)
+│   └── jenkins/             # Module for Helm installation Jenkins
+│   └── agro_cd/             # Module for Helm installation AgroCD
+│   └── rds/                 # Module for RDS
 ├── charts/
 │   └── django-app/          # Custom Helm Chart
 │       ├── templates/
@@ -75,6 +78,67 @@ module "rds" {
   admin_username = "db_user"
   admin_password = "SecurePassword123!"
 }
+```
+
+# End-to-End GitOps Pipeline (Jenkins + Argo CD + EKS)
+
+Project provisions an Amazon EKS cluster with Terraform, installs **Jenkins** and **Argo CD** via Helm, and implements an automated GitOps CI/CD delivery pipeline.
+
+## 🏗 Architecture Overview
+
+```text
++--------------+        +-------------------+        +----------------+
+|  Developer   | ---->  | Push Code to Git  | ---->  |  Jenkins CI    |
++--------------+        +-------------------+        +----------------+
+                                                              |
+                                                    (Build Image via Kaniko)
+                                                              v
++--------------+        +-------------------+        +----------------+
+| Argo CD Sync | <----  | Update Helm Tag   | <----  |  Push to ECR   |
+| to EKS Pods  |        | in Git Repository |        +----------------+
++--------------+        +-------------------+
+```
+1. Provision Infrastructure with Terraform
+```bash
+# Initialize Terraform
+terraform init
+
+# Validate Configuration
+terraform validate
+
+# Apply Resources (VPC, EKS, ECR, Jenkins, Argo CD)
+terraform apply -auto-approve
+```
+
+2. Verify Jenkins CI Job
+```bash
+# Get the Jenkins external URL & initial admin password:
+
+kubectl get svc -n jenkins
+
+kubectl exec -it svc/jenkins -n jenkins -- cat /var/jenkins_home/secrets/initialAdminPassword
+
+# Open Jenkins dashboard in your browser.
+
+# Create a Pipeline job pointing to your Git repository's Jenkinsfile.
+
+# Run the build. Kaniko will build the image, push it to ECR, and commit the updated IMAGE_TAG to charts/django-app/values.yaml.
+```
+
+3. Verify Argo CD GitOps Deployment
+
+```bash
+# Retrieve Argo CD admin password:
+
+kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d
+
+# Get Argo CD UI LoadBalancer address:
+
+kubectl get svc -n argocd argo-cd-argocd-server
+
+# Open Argo CD UI and verify that the django-app Application is status Synced and Healthy.
+
+# Whenever Jenkins updates the image tag in Git, Argo CD auto-detects changes within 3 minutes and updates running pods in Kubernetes.
 ```
 
 # Deployment Guide

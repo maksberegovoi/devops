@@ -1,0 +1,17 @@
+controller:
+  serviceType: LoadBalancer
+  installPlugins:
+    - kubernetes:4267.vb_b_0952d43e5c
+    - git:5.2.1
+    - workflow-aggregator:596.v8c21c963d92d
+    - pipeline-stage-view:2.34
+  resources:
+    requests:
+      cpu: "250m"
+      memory: "512Mi"
+    limits:
+      cpu: "1000m"
+      memory: "2048Mi"
+
+agent:
+  enabled: true
