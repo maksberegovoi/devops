@@ -1,0 +1,5 @@
+apiVersion: v2
+name: argocd-apps
+description: Helm chart to deploy Argo CD Application manifests
+version: 0.1.0
+appVersion: "1.0"

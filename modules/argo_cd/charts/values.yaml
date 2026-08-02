@@ -1,0 +1,4 @@
+repositoryUrl: "https://github.com/maxim/devops.git"
+targetRevision: "main"
+chartPath: "charts/django-app"
+destinationNamespace: "default"

@@ -1,0 +1,22 @@
+controller:
+  image:
+    tag: "2.504.3-jdk17"
+  serviceType: LoadBalancer
+  installPlugins:
+    - kubernetes:latest
+    - git:latest
+    - workflow-aggregator:latest
+    - pipeline-stage-view:latest
+  resources:
+    requests:
+      cpu: "250m"
+      memory: "512Mi"
+    limits:
+      cpu: "1000m"
+      memory: "2048Mi"
+
+persistence:
+  enabled: false
+
+agent:
+  enabled: true
