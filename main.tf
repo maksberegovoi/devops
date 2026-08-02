@@ -39,3 +39,27 @@ module "eks" {
   vpc_id       = module.vpc.vpc_id
   subnet_ids   = module.vpc.public_subnet_ids
 }
+
+module "rds" {
+  source = "./modules/rds"
+
+  name       = "lesson-8-db"
+  vpc_id     = module.vpc.vpc_id
+  subnet_ids = module.vpc.private_subnet_ids
+
+  use_aurora     = false
+  engine         = "postgres"
+  engine_version = "15.4"
+  instance_class = "db.t4g.micro"
+
+  db_name        = "django_db"
+  admin_username = "postgres"
+  admin_password = "SuperSecretPassword123!"
+
+  allowed_cidr_blocks = ["10.0.0.0/16"]
+
+  tags = {
+    Environment = "lesson-8"
+    ManagedBy   = "Terraform"
+  }
+}

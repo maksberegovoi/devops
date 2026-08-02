@@ -1,4 +1,4 @@
-## Infrastructure & Project Structure
+# Infrastructure & Project Structure
 
 ```text
 lesson-7/
@@ -25,7 +25,59 @@ lesson-7/
 └── requirements.txt         # Python dependencies
 ```
 
-## Deployment Guide
+# Flexible RDS / Aurora Terraform Module
+
+This module provisions either a **Single Amazon RDS Instance** or an **Amazon Aurora Cluster** based on a single boolean variable (`use_aurora`).
+
+## Features
+- Conditional creation of Single RDS (`aws_db_instance`) or Aurora (`aws_rds_cluster`).
+- Managed `DB Subnet Group` and `Security Group`.
+- Dynamic `Parameter Group` setup according to engine type.
+
+
+## Usage Example
+
+### 1. Standard PostgreSQL RDS Instance
+```hcl
+module "rds" {
+  source     = "./modules/rds"
+  
+  name       = "my-app-db"
+  vpc_id     = module.vpc.vpc_id
+  subnet_ids = module.vpc.private_subnet_ids
+  
+  use_aurora     = false
+  engine         = "postgres"
+  engine_version = "15.4"
+  instance_class = "db.t4g.micro"
+  
+  db_name        = "app_db"
+  admin_username = "db_user"
+  admin_password = "SecurePassword123!"
+}
+```
+
+### 2. High-Availability Aurora PostgreSQL Cluster
+```hcl
+module "rds" {
+  source     = "./modules/rds"
+  
+  name       = "my-aurora-cluster"
+  vpc_id     = module.vpc.vpc_id
+  subnet_ids = module.vpc.private_subnet_ids
+  
+  use_aurora     = true
+  engine         = "aurora-postgresql"
+  engine_version = "15.4"
+  instance_class = "db.r6g.large"
+  
+  db_name        = "app_db"
+  admin_username = "db_user"
+  admin_password = "SecurePassword123!"
+}
+```
+
+# Deployment Guide
 Initialize local state
 ```bash
    terraform init

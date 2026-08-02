@@ -17,3 +17,7 @@ output "ecr_repository_url" {
 output "eks_cluster_name" {
   value = module.eks.cluster_name
 }
+
+output "db_endpoint" {
+  value = module.rds.endpoint
+}
