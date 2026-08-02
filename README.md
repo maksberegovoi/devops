@@ -141,6 +141,11 @@ kubectl get svc -n argocd argo-cd-argocd-server
 # Whenever Jenkins updates the image tag in Git, Argo CD auto-detects changes within 3 minutes and updates running pods in Kubernetes.
 ```
 
+# Access Grafana Monitoring Dashboard
+```bash
+kubectl port-forward svc/kube-prometheus-stack-grafana 3000:80 -n monitoring
+```
+
 # Deployment Guide
 Initialize local state
 ```bash

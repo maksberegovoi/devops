@@ -34,8 +34,9 @@ resource "aws_db_parameter_group" "single" {
   family = "${var.engine}${split(".", var.engine_version)[0]}"
 
   parameter {
-    name  = "max_connections"
-    value = "100"
+    name         = "max_connections"
+    value        = "100"
+    apply_method = "pending-reboot"
   }
 
   parameter {

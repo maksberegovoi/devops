@@ -57,7 +57,7 @@ module "rds" {
 
   use_aurora     = false
   engine         = "postgres"
-  engine_version = "15.4"
+  engine_version = "15"
   instance_class = "db.t4g.micro"
 
   db_name        = "django_db"
@@ -79,4 +79,8 @@ module "jenkins" {
 module "argo_cd" {
   source   = "./modules/argo_cd"
   repo_url = "https://github.com/maxim/devops.git"
+}
+
+module "monitoring" {
+  source = "./modules/monitoring"
 }
