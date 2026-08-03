@@ -32,3 +32,8 @@ resources:
   requests:
     cpu: 100m
     memory: 128Mi
+
+env:
+  secret:
+    dbPassword: "qwerty123"
+    secretKey: "qwerty123-qwerty123"
