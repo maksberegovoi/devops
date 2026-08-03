@@ -11,3 +11,16 @@ variable "github_pat" {
   sensitive   = true
   default     = "tokenfordevops123"
 }
+
+variable "db_password" {
+  description = "Database master password"
+  type        = string
+  sensitive   = true
+  default     = "qwerty123!"
+}
+
+variable "allowed_cidr_blocks" {
+  description = "Allowed CIDR blocks for RDS security group"
+  type        = list(string)
+  default     = ["10.0.0.0/16"]
+}

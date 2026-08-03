@@ -2,7 +2,7 @@ resource "aws_rds_cluster" "aurora" {
   count = var.use_aurora ? 1 : 0
 
   cluster_identifier              = "${var.name}-cluster"
-  engine                          = var.engine
+  engine                          = local.actual_engine
   engine_version                  = var.engine_version
   database_name                   = var.db_name
   master_username                 = var.admin_username

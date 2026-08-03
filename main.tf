@@ -63,9 +63,9 @@ module "rds" {
 
   db_name        = "django_db"
   admin_username = "postgres"
-  admin_password = "SuperSecretPassword123!"
+  admin_password = var.db_password
 
-  allowed_cidr_blocks = ["10.0.0.0/16"]
+  allowed_cidr_blocks = var.allowed_cidr_blocks
 
   tags = {
     Environment = "lesson-8"

@@ -2,7 +2,7 @@ resource "aws_db_instance" "this" {
   count = var.use_aurora ? 0 : 1
 
   identifier             = var.name
-  engine                 = var.engine
+  engine                 = local.actual_engine
   engine_version         = var.engine_version
   instance_class         = var.instance_class
   allocated_storage      = var.allocated_storage
