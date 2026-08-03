@@ -8,12 +8,15 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: {{ .Values.repositoryUrl }}
-    targetRevision: {{ .Values.targetRevision }}
-    path: {{ .Values.chartPath }}
+    repoURL: {{ .Values.repositoryUrl | quote }}
+    targetRevision: {{ default "HEAD" .Values.targetRevision | quote }}
+    path: {{ default "charts/django-app" .Values.chartPath | quote }}
+    helm:
+      valueFiles:
+        - values.yaml
   destination:
     server: https://kubernetes.default.svc
-    namespace: {{ .Values.destinationNamespace }}
+    namespace: {{ default "default" .Values.destinationNamespace | quote }}
   syncPolicy:
     automated:
       prune: true

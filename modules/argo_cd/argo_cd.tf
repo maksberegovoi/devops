@@ -26,5 +26,20 @@ resource "helm_release" "argocd_apps" {
     value = var.repo_url
   }
 
+  set {
+    name  = "targetRevision"
+    value = "HEAD"
+  }
+
+  set {
+    name  = "chartPath"
+    value = "charts/django-app"
+  }
+
+  set {
+    name  = "destinationNamespace"
+    value = "default"
+  }
+
   depends_on = [helm_release.argocd]
 }

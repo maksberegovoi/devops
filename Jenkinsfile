@@ -1,71 +1,60 @@
-pipeline {
-    agent {
-        kubernetes {
-            yaml '''
+def ECR_REGISTRY = "164253013547.dkr.ecr.us-east-2.amazonaws.com"
+def IMAGE_NAME   = "lesson-7-ecr"
+def IMAGE_TAG    = "v1.0.${BUILD_NUMBER}"
+
+def COMMIT_EMAIL = "jenkins@localhost"
+def COMMIT_NAME  = "jenkins"
+
+podTemplate(
+  yaml: """
 apiVersion: v1
 kind: Pod
 spec:
+  serviceAccountName: jenkins
   containers:
   - name: kaniko
-    image: gcr.io/kaniko-project/executor:v1.14.0-debug
-    command:
-    - sleep
-    args:
-    - 99d
-    volumeMounts:
-    - name: aws-secret
-      mountPath: /root/.aws
+    image: gcr.io/kaniko-project/executor:v1.16.0-debug
+    imagePullPolicy: Always
+    command: ['sleep']
+    args: ['99d']
   - name: git
-    image: alpine/git:v2.32.0
-    command:
-    - sleep
-    args:
-    - 99d
-  volumes:
-  - name: aws-secret
-    emptyDir: {}
-'''
-        }
+    image: alpine/git
+    command: ['sleep']
+    args: ['99d']
+"""
+) {
+  node(POD_LABEL) {
+    checkout scm
+
+    stage('Build & Push Docker Image') {
+      container('kaniko') {
+        sh """
+          /kaniko/executor \\
+            --context \$(pwd) \\
+            --dockerfile \$(pwd)/Dockerfile \\
+            --destination=${ECR_REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}
+        """
+      }
     }
 
-    environment {
-        AWS_REGION     = 'us-east-2'
-        ECR_REGISTRY   = '164253013547.dkr.ecr.us-east-2.amazonaws.com'
-        ECR_REPOSITORY = 'lesson-7-ecr'
-        IMAGE_TAG      = "v${BUILD_NUMBER}"
-    }
+    stage('Update Chart Tag in Git') {
+      container('git') {
+        withCredentials([usernamePassword(credentialsId: 'github-token', usernameVariable: 'GIT_USERNAME', passwordVariable: 'GIT_PAT')]) {
+          sh """
+            git clone https://\${GIT_USERNAME}:\${GIT_PAT}@github.com/maksberegovoi/devops.git
+            cd devops/charts/django-app
 
-    stages {
-        stage('Build & Push to ECR via Kaniko') {
-            steps {
-                container('kaniko') {
-                    sh '''
-                    /kaniko/executor \
-                      --context=dir://. \
-                      --dockerfile=Dockerfile \
-                      --destination=${ECR_REGISTRY}/${ECR_REPOSITORY}:${IMAGE_TAG} \
-                      --destination=${ECR_REGISTRY}/${ECR_REPOSITORY}:latest
-                    '''
-                }
-            }
+            sed -i "s/tag: .*/tag: ${IMAGE_TAG}/" values.yaml
+
+            git config user.email "${COMMIT_EMAIL}"
+            git config user.name "${COMMIT_NAME}"
+
+            git add values.yaml
+            git commit -m "Update image tag to ${IMAGE_TAG}"
+            git push origin main
+          """
         }
-
-        stage('Update Helm Values & Git Push') {
-            steps {
-                container('git') {
-                    sh '''
-                    git config --global user.email "jenkins-ci@example.com"
-                    git config --global user.name "Jenkins CI"
-
-                    # Обновляем тег образа в values.yaml
-                    sed -i "s/tag: .*/tag: \"${IMAGE_TAG}\"/" charts/django-app/values.yaml
-
-                    git add charts/django-app/values.yaml
-                    git commit -m "ci: update image tag to ${IMAGE_TAG} [skip ci]" || true
-                    git push origin HEAD:main
-                    '''
-                }
-            }
-        }
+      }
     }
+  }
 }
