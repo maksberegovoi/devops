@@ -79,4 +79,5 @@ module "jenkins" {
 module "argo_cd" {
   source   = "./modules/argo_cd"
   repo_url = "https://github.com/maxim/devops.git"
+  private_subnet_ids = module.vpc.private_subnet_ids
 }
