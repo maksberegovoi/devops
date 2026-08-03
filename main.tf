@@ -68,7 +68,7 @@ module "rds" {
   allowed_cidr_blocks = var.allowed_cidr_blocks
 
   tags = {
-    Environment = "lesson-8"
+    Environment = "final-project"
     ManagedBy   = "Terraform"
   }
 }

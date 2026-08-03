@@ -29,6 +29,9 @@ spec:
     stage('Build & Push Docker Image') {
       container('kaniko') {
         sh """
+          mkdir -p /kaniko/.docker
+          echo '{"credsStore": "ecr-login"}' > /kaniko/.docker/config.json
+
           /kaniko/executor \\
             --context \$(pwd) \\
             --dockerfile \$(pwd)/Dockerfile \\
