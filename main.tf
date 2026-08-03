@@ -42,10 +42,11 @@ module "ecr" {
 }
 
 module "eks" {
-  source       = "./modules/eks"
-  cluster_name = "lesson-7-eks"
-  vpc_id       = module.vpc.vpc_id
-  subnet_ids   = module.vpc.public_subnet_ids
+  source             = "./modules/eks"
+  cluster_name       = "lesson-7-eks"
+  vpc_id             = module.vpc.vpc_id
+  public_subnet_ids  = module.vpc.public_subnet_ids
+  private_subnet_ids = module.vpc.private_subnet_ids
 }
 
 module "rds" {
@@ -62,9 +63,9 @@ module "rds" {
 
   db_name        = "django_db"
   admin_username = "postgres"
-  admin_password = "SuperSecretPassword123!"
+  admin_password = var.db_password
 
-  allowed_cidr_blocks = ["10.0.0.0/16"]
+  allowed_cidr_blocks = var.allowed_cidr_blocks
 
   tags = {
     Environment = "lesson-8"
@@ -77,10 +78,7 @@ module "jenkins" {
 }
 
 module "argo_cd" {
-  source   = "./modules/argo_cd"
-  repo_url = "https://github.com/maxim/devops.git"
-}
-
-module "monitoring" {
-  source = "./modules/monitoring"
+  source    = "./modules/argo_cd"
+  namespace = "argocd"
+  repo_url  = "https://github.com/maksberegovoi/devops.git"
 }

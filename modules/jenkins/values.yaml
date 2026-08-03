@@ -1,12 +1,13 @@
 controller:
   image:
-    tag: "2.504.3-jdk17"
+    tag: "lts-jdk17"
   serviceType: LoadBalancer
   installPlugins:
     - kubernetes:latest
     - git:latest
     - workflow-aggregator:latest
     - pipeline-stage-view:latest
+    - configuration-as-code:latest
   resources:
     requests:
       cpu: "250m"
@@ -14,6 +15,13 @@ controller:
     limits:
       cpu: "1000m"
       memory: "2048Mi"
+
+serviceAccount:
+  create: true
+  name: jenkins
+
+rbac:
+  create: true
 
 persistence:
   enabled: false

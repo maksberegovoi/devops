@@ -1,3 +1,17 @@
+locals {
+  actual_engine = var.use_aurora ? (
+    var.engine == "postgres" ? "aurora-postgresql" : (
+      var.engine == "mysql" ? "aurora-mysql" : var.engine
+    )
+  ) : var.engine
+
+  db_family = var.use_aurora ? (
+    startswith(local.actual_engine, "aurora-postgresql") ? "aurora-postgresql15" : "aurora-mysql8.0"
+  ) : (
+    startswith(local.actual_engine, "postgres") ? "postgres15" : "mysql8.0"
+  )
+}
+
 resource "aws_db_subnet_group" "this" {
   name       = "${var.name}-subnet-group"
   subnet_ids = var.subnet_ids
@@ -12,8 +26,8 @@ resource "aws_security_group" "this" {
 
   ingress {
     description = "Allow DB connection from internal network"
-    from_port   = var.engine == "mysql" || var.engine == "aurora-mysql" ? 3306 : 5432
-    to_port     = var.engine == "mysql" || var.engine == "aurora-mysql" ? 3306 : 5432
+    from_port   = endswith(local.actual_engine, "mysql") ? 3306 : 5432
+    to_port     = endswith(local.actual_engine, "mysql") ? 3306 : 5432
     protocol    = "tcp"
     cidr_blocks = var.allowed_cidr_blocks
   }
@@ -31,7 +45,7 @@ resource "aws_security_group" "this" {
 resource "aws_db_parameter_group" "single" {
   count  = var.use_aurora ? 0 : 1
   name   = "${var.name}-rds-pg"
-  family = "${var.engine}${split(".", var.engine_version)[0]}"
+  family = local.db_family
 
   parameter {
     name         = "max_connections"
@@ -44,13 +58,18 @@ resource "aws_db_parameter_group" "single" {
     value = "all"
   }
 
+  parameter {
+    name  = "work_mem"
+    value = "4096"
+  }
+
   tags = var.tags
 }
 
 resource "aws_rds_cluster_parameter_group" "aurora" {
   count  = var.use_aurora ? 1 : 0
   name   = "${var.name}-aurora-pg"
-  family = "${var.engine}${split(".", var.engine_version)[0]}"
+  family = local.db_family
 
   parameter {
     name  = "log_statement"
