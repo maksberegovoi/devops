@@ -8,6 +8,9 @@ controller:
     - workflow-aggregator:latest
     - pipeline-stage-view:latest
     - configuration-as-code:latest
+    - credentials-binding:latest
+    - github:latest
+    - aws-credentials:latest
   resources:
     requests:
       cpu: "250m"
@@ -15,6 +18,73 @@ controller:
     limits:
       cpu: "1000m"
       memory: "2048Mi"
+  extraEnv:
+    - name: GITHUB_TOKEN
+      valueFrom:
+        secretKeyRef:
+          name: jenkins-secrets
+          key: github-token
+    - name: AWS_ACCESS_KEY_ID
+      valueFrom:
+        secretKeyRef:
+          name: jenkins-secrets
+          key: aws-access-key-id
+    - name: AWS_SECRET_ACCESS_KEY
+      valueFrom:
+        secretKeyRef:
+          name: jenkins-secrets
+          key: aws-secret-access-key
+
+  JCasC:
+    enabled: true
+    defaultConfig: true
+    configScripts:
+      kubernetes-cloud: |
+        jenkins:
+          clouds:
+            - kubernetes:
+                name: "kubernetes"
+                serverUrl: "https://kubernetes.default.svc"
+                namespace: "jenkins"
+                jenkinsUrl: "http://jenkins.jenkins.svc.cluster.local:8080"
+                jenkinsTunnel: "jenkins-agent.jenkins.svc.cluster.local:50000"
+                containerCapStr: "10"
+                templates:
+                  - name: "kaniko-git"
+                    label: "kaniko-git"
+                    nodeUsageMode: "NORMAL"
+                    workspaceVolume:
+                      emptyDirWorkspaceVolume:
+                        memory: false
+                    containers:
+                      - name: "kaniko"
+                        image: "gcr.io/kaniko-project/executor:v1.16.0-debug"
+                        command: "/busybox/sleep"
+                        args: "99d"
+                        ttyEnabled: true
+                        workingDir: "/home/jenkins/agent"
+                      - name: "git"
+                        image: "alpine/git:latest"
+                        command: "sleep"
+                        args: "99d"
+                        ttyEnabled: true
+                        workingDir: "/home/jenkins/agent"
+          credentials:
+            system:
+              domainCredentials:
+                - credentials:
+                    - usernamePassword:
+                        scope: GLOBAL
+                        id: "github-token"
+                        username: "maksberegovoi"
+                        password: "${GITHUB_TOKEN}"
+                        description: "GitHub PAT for pushing chart updates"
+                    - usernamePassword:
+                        scope: GLOBAL
+                        id: "aws-ecr-credentials"
+                        username: "${AWS_ACCESS_KEY_ID}"
+                        password: "${AWS_SECRET_ACCESS_KEY}"
+                        description: "AWS ECR Credentials"
 
 serviceAccount:
   create: true

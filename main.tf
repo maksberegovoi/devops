@@ -63,18 +63,22 @@ module "rds" {
 
   db_name        = "django_db"
   admin_username = "postgres"
-  admin_password = "SuperSecretPassword123!"
+  admin_password = var.db_password
 
-  allowed_cidr_blocks = ["10.0.0.0/16"]
+  allowed_cidr_blocks = var.allowed_cidr_blocks
 
   tags = {
-    Environment = "lesson-8"
+    Environment = "final-project"
     ManagedBy   = "Terraform"
   }
 }
 
 module "jenkins" {
   source = "./modules/jenkins"
+
+  github_token          = var.github_pat
+  aws_access_key_id     = var.aws_access_key_id
+  aws_secret_access_key = var.aws_secret_access_key
 }
 
 module "argo_cd" {
