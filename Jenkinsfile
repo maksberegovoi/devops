@@ -33,21 +33,13 @@ pipeline {
         stage('Build & Push Docker Image to ECR') {
             steps {
                 container('kaniko') {
-                    withCredentials([
-                        usernamePassword(
-                            credentialsId: 'aws-ecr-credentials',
-                            usernameVariable: 'AWS_ACCESS_KEY_ID',
-                            passwordVariable: 'AWS_SECRET_ACCESS_KEY'
-                        )
-                    ]) {
-                        sh """
-                            /kaniko/executor \
-                                --context=dir://. \
-                                --dockerfile=Dockerfile \
-                                --destination=${ECR_REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG} \
-                                --cache=true
-                        """
-                    }
+                    sh """
+                        /kaniko/executor \
+                            --context=dir://. \
+                            --dockerfile=Dockerfile \
+                            --destination=${ECR_REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG} \
+                            --cache=true
+                    """
                 }
             }
         }

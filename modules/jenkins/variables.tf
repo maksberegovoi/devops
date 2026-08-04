@@ -16,14 +16,17 @@ variable "github_token" {
   sensitive   = true
 }
 
-variable "aws_access_key_id" {
-  description = "AWS Access Key ID for ECR push"
+variable "cluster_name" {
+  description = "EKS Cluster Name for IRSA role naming"
   type        = string
-  sensitive   = true
 }
 
-variable "aws_secret_access_key" {
-  description = "AWS Secret Access Key for ECR push"
+variable "oidc_provider_arn" {
+  description = "OIDC Provider ARN for EKS IRSA"
   type        = string
-  sensitive   = true
+}
+
+variable "oidc_provider_url" {
+  description = "OIDC Provider URL for EKS IRSA"
+  type        = string
 }

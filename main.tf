@@ -58,7 +58,7 @@ module "rds" {
 
   use_aurora     = var.use_aurora
   engine         = "postgres"
-  engine_version = "15"
+  engine_version = "15.4"
   instance_class = "db.t4g.micro"
 
   db_name        = "django_db"
@@ -76,13 +76,19 @@ module "rds" {
 module "jenkins" {
   source = "./modules/jenkins"
 
-  github_token          = var.github_pat
-  aws_access_key_id     = var.aws_access_key_id
-  aws_secret_access_key = var.aws_secret_access_key
+  cluster_name      = module.eks.cluster_name
+  oidc_provider_arn = module.eks.oidc_provider_arn
+  oidc_provider_url = module.eks.oidc_provider_url
+  github_token      = var.github_pat
 }
 
 module "argo_cd" {
   source    = "./modules/argo_cd"
   namespace = "argocd"
   repo_url  = "https://github.com/maksberegovoi/devops.git"
+}
+
+module "monitoring" {
+  source    = "./modules/monitoring"
+  namespace = "monitoring"
 }

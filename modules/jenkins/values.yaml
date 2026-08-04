@@ -10,7 +10,6 @@ controller:
     - configuration-as-code:latest
     - credentials-binding:latest
     - github:latest
-    - aws-credentials:latest
   resources:
     requests:
       cpu: "250m"
@@ -24,16 +23,6 @@ controller:
         secretKeyRef:
           name: jenkins-secrets
           key: github-token
-    - name: AWS_ACCESS_KEY_ID
-      valueFrom:
-        secretKeyRef:
-          name: jenkins-secrets
-          key: aws-access-key-id
-    - name: AWS_SECRET_ACCESS_KEY
-      valueFrom:
-        secretKeyRef:
-          name: jenkins-secrets
-          key: aws-secret-access-key
 
   JCasC:
     enabled: true
@@ -79,12 +68,6 @@ controller:
                         username: "maksberegovoi"
                         password: "${GITHUB_TOKEN}"
                         description: "GitHub PAT for pushing chart updates"
-                    - usernamePassword:
-                        scope: GLOBAL
-                        id: "aws-ecr-credentials"
-                        username: "${AWS_ACCESS_KEY_ID}"
-                        password: "${AWS_SECRET_ACCESS_KEY}"
-                        description: "AWS ECR Credentials"
 
 serviceAccount:
   create: true

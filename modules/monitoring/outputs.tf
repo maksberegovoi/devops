@@ -1,3 +1,4 @@
 output "grafana_service_name" {
-  value = "kube-prometheus-stack-grafana"
+  description = "Service name of deployed Grafana instance"
+  value       = "kube-prometheus-stack-grafana"
 }

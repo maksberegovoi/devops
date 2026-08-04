@@ -20,9 +20,9 @@ configMap:
   SECRET_KEY: "django-insecure-dev-key"
   DEBUG: "1"
   DB_ENGINE: "django.db.backends.postgresql"
-  DB_NAME: "app_db"
-  DB_USER: "app_user"
-  DB_HOST: "db-postgres-service"
+  DB_NAME: "django_db"
+  DB_USER: "db_admin"
+  DB_HOST: "lesson-8-db.c164253013547.us-east-2.rds.amazonaws.com"
   DB_PORT: "5432"
 
 resources:

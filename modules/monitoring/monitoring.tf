@@ -11,8 +11,8 @@ resource "helm_release" "prometheus_stack" {
   version    = var.chart_version
   namespace  = kubernetes_namespace.monitoring.metadata[0].name
 
-  timeout    = 900
-  wait       = false
+  timeout = 900
+  wait    = false
 
   set {
     name  = "grafana.service.type"
