@@ -10,3 +10,20 @@ variable "namespace" {
   default     = "jenkins"
 }
 
+variable "github_token" {
+  description = "GitHub Personal Access Token for pushing chart updates"
+  type        = string
+  sensitive   = true
+}
+
+variable "aws_access_key_id" {
+  description = "AWS Access Key ID for ECR push"
+  type        = string
+  sensitive   = true
+}
+
+variable "aws_secret_access_key" {
+  description = "AWS Secret Access Key for ECR push"
+  type        = string
+  sensitive   = true
+}

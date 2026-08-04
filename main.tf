@@ -68,13 +68,17 @@ module "rds" {
   allowed_cidr_blocks = var.allowed_cidr_blocks
 
   tags = {
-    Environment = "lesson-8"
+    Environment = "final-project"
     ManagedBy   = "Terraform"
   }
 }
 
 module "jenkins" {
   source = "./modules/jenkins"
+
+  github_token          = var.github_pat
+  aws_access_key_id     = var.aws_access_key_id
+  aws_secret_access_key = var.aws_secret_access_key
 }
 
 module "argo_cd" {
