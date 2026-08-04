@@ -92,3 +92,31 @@ module "monitoring" {
   source    = "./modules/monitoring"
   namespace = "monitoring"
 }
+
+resource "kubernetes_config_map" "django_app" {
+  metadata {
+    name      = "django-app-config"
+    namespace = "default"
+  }
+
+  data = {
+    DB_ENGINE = "django.db.backends.postgresql"
+    DB_NAME   = "django_db"
+    DB_USER   = "db_admin"
+    DB_HOST   = split(":", module.rds.endpoint)[0]
+    DB_PORT   = tostring(module.rds.port)
+    DEBUG     = "False"
+  }
+}
+
+resource "kubernetes_secret" "django_app" {
+  metadata {
+    name      = "django-app-secrets"
+    namespace = "default"
+  }
+
+  data = {
+    DB_PASSWORD = var.db_password
+    SECRET_KEY  = var.django_secret_key
+  }
+}

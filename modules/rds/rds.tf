@@ -15,6 +15,8 @@ resource "aws_db_instance" "this" {
   parameter_group_name   = aws_db_parameter_group.single[0].name
   multi_az               = var.multi_az
   skip_final_snapshot    = true
+  publicly_accessible    = false
+  storage_encrypted      = true
 
   tags = merge(var.tags, { Name = var.name })
 }

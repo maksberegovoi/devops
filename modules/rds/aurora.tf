@@ -11,6 +11,7 @@ resource "aws_rds_cluster" "aurora" {
   vpc_security_group_ids          = [aws_security_group.this.id]
   db_cluster_parameter_group_name = aws_rds_cluster_parameter_group.aurora[0].name
   skip_final_snapshot             = true
+  storage_encrypted               = true
 
   tags = merge(var.tags, { Name = "${var.name}-cluster" })
 }

@@ -28,6 +28,12 @@ variable "db_password" {
   sensitive   = true
 }
 
+variable "django_secret_key" {
+  description = "Django SECRET_KEY for the application"
+  type        = string
+  sensitive   = true
+}
+
 variable "allowed_cidr_blocks" {
   description = "Allowed CIDR blocks for RDS security group"
   type        = list(string)
