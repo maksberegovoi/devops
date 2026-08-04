@@ -30,6 +30,28 @@ pipeline {
             }
         }
 
+        stage('Generate ECR auth') {
+            steps {
+                container('awscli') {
+                    withCredentials([
+                        usernamePassword(
+                            credentialsId: 'aws-ecr-credentials',
+                            usernameVariable: 'AWS_ACCESS_KEY_ID',
+                            passwordVariable: 'AWS_SECRET_ACCESS_KEY'
+                        )
+                    ]) {
+                        sh '''
+                            ECR_HOST=$(echo "${ECR_REGISTRY}" | cut -d'/' -f1)
+                            TOKEN=$(aws ecr get-login-password --region "${AWS_REGION}")
+                            AUTH=$(echo -n "AWS:${TOKEN}" | base64 -w 0)
+                            mkdir -p /kaniko/.docker
+                            echo "{ \\"auths\\": { \\"${ECR_HOST}\\": { \\"auth\\": \\"${AUTH}\\" } } }" > /kaniko/.docker/config.json
+                        '''
+                    }
+                }
+            }
+        }
+
         stage('Build & Push Docker Image to ECR') {
             steps {
                 container('kaniko') {
@@ -44,8 +66,13 @@ pipeline {
             }
         }
 
-        stage('Update Helm Chart Tag in Git') {
+        stage('Update Helm Chart & Push to Git') {
             steps {
+                container('yq') {
+                    sh """
+                        yq -i '.image.repository = "${ECR_REGISTRY}/${IMAGE_NAME}" | .image.tag = "${IMAGE_TAG}"' ${CHART_PATH}/values.yaml
+                    """
+                }
                 container('git') {
                     withCredentials([
                         usernamePassword(
@@ -55,22 +82,19 @@ pipeline {
                         )
                     ]) {
                         sh """
-                            set -e
                             git clone --branch ${GIT_BRANCH} https://\${GIT_USERNAME}:\${GIT_PAT}@github.com/maksberegovoi/devops.git gitops-repo
-                            cd gitops-repo/${CHART_PATH}
-
-                            sed -i "s|tag: .*|tag: \"${IMAGE_TAG}\"|" values.yaml
-
+                            cd gitops-repo
                             git config user.email "${COMMIT_EMAIL}"
                             git config user.name "${COMMIT_NAME}"
-                            git add values.yaml
-                            git commit -m "chore: update image tag to ${IMAGE_TAG} [skip ci]" || true
+                            git add ${CHART_PATH}/values.yaml
+                            git diff --cached --quiet || git commit -m "chore: update image tag to ${IMAGE_TAG} [skip ci]"
                             git push origin ${GIT_BRANCH}
                         """
                     }
                 }
             }
         }
+
     }
 
     post {

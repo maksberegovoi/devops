@@ -52,12 +52,25 @@ controller:
                         args: "99d"
                         ttyEnabled: true
                         workingDir: "/home/jenkins/agent"
+                      - name: "awscli"
+                        image: "amazon/aws-cli:latest"
+                        command: "/bin/sh"
+                        args: "-c, sleep 99d"
+                        ttyEnabled: true
+                        workingDir: "/home/jenkins/agent"
+                      - name: "yq"
+                        image: "mikefarah/yq:latest"
+                        command: "sleep"
+                        args: "99d"
+                        ttyEnabled: true
+                        workingDir: "/home/jenkins/agent"
                       - name: "git"
                         image: "alpine/git:latest"
                         command: "sleep"
                         args: "99d"
                         ttyEnabled: true
                         workingDir: "/home/jenkins/agent"
+
           credentials:
             system:
               domainCredentials:
