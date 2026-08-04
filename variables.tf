@@ -2,7 +2,6 @@ variable "jenkins_admin_password" {
   description = "Jenkins admin password"
   type        = string
   sensitive   = true
-  default     = "qwerty123!"
 }
 
 variable "github_pat" {
@@ -27,11 +26,16 @@ variable "db_password" {
   description = "Database master password"
   type        = string
   sensitive   = true
-  default     = "SuperSecretPassword123!"
 }
 
 variable "allowed_cidr_blocks" {
   description = "Allowed CIDR blocks for RDS security group"
   type        = list(string)
   default     = ["10.0.0.0/16"]
+}
+
+variable "use_aurora" {
+  description = "Flag to switch between Aurora Cluster (true) and Single RDS Instance (false)"
+  type        = bool
+  default     = false
 }

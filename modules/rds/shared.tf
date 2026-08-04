@@ -7,7 +7,7 @@ locals {
 
   db_family = var.use_aurora ? (
     startswith(local.actual_engine, "aurora-postgresql") ? "aurora-postgresql15" : "aurora-mysql8.0"
-  ) : (
+    ) : (
     startswith(local.actual_engine, "postgres") ? "postgres15" : "mysql8.0"
   )
 }
@@ -73,6 +73,16 @@ resource "aws_rds_cluster_parameter_group" "aurora" {
   parameter {
     name  = "log_statement"
     value = "all"
+  }
+
+  parameter {
+    name  = "max_connections"
+    value = "100"
+  }
+
+  parameter {
+    name  = "work_mem"
+    value = "4096"
   }
 
   tags = var.tags
