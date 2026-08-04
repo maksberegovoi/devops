@@ -1,206 +1,313 @@
-# Infrastructure & Project Structure
+# 🚀 CI/CD Pipeline: Jenkins + Helm + Terraform + Argo CD
+
+Повний GitOps CI/CD-процес для Django-застосунку на Amazon EKS:
+
+1. **Jenkins** автоматично збирає Docker-образ (Kaniko) та пушить його в **Amazon ECR**
+2. **Jenkins** оновлює тег образу в Helm chart (`charts/django-app/values.yaml`) у Git-репозиторії
+3. **Argo CD** відстежує зміни в Git та автоматично синхронізує застосунок у кластері
+
+---
+
+## 📐 Схема CI/CD
 
 ```text
-lesson-7/
-├── main.tf                  # Root module connecting VPC, ECR, S3, EKS
-├── backend.tf               # S3 Remote State + DynamoDB Lock configuration
-├── outputs.tf               # Infrastructure outputs
-├── modules/
-│   ├── s3-backend/          # S3 bucket for tfstate & DynamoDB table for locks
-│   ├── vpc/                 # VPC with Public/Private subnets, IGW, NAT Gateway
-│   ├── ecr/                 # ECR repository with scan-on-push & lifecycle rules
-│   └── eks/                 # Amazon EKS Cluster + Managed Node Groups (t3.small)
-│   └── jenkins/             # Module for Helm installation Jenkins
-│   └── agro_cd/             # Module for Helm installation AgroCD
-│   └── rds/                 # Module for RDS
+┌──────────────┐     ┌──────────────────┐     ┌──────────────────┐
+│  Developer   │────▶│  Git Repository  │────▶│  Jenkins (CI)    │
+│  push code   │     │  (GitHub)        │     │  Kubernetes Pod  │
+└──────────────┘     └──────────────────┘     └──────────────────┘
+                                                       │
+                                              ┌────────▼────────┐
+                                              │  Kaniko Agent   │
+                                              │  Build Image    │
+                                              └────────┬────────┘
+                                                       │
+                                              ┌────────▼────────┐
+                                              │  Amazon ECR     │
+                                              │  Push Image     │
+                                              └────────┬────────┘
+                                                       │
+                                              ┌────────▼────────┐
+                                              │  Update Helm    │
+                                              │  Chart Tag in   │
+                                              │  Git (values)   │
+                                              └────────┬────────┘
+                                                       │
+                                              ┌────────▼────────┐
+                                              │  Argo CD (CD)   │
+                                              │  Auto-Sync      │
+                                              └────────┬────────┘
+                                                       │
+                                              ┌────────▼────────┐
+                                              │  EKS Cluster    │
+                                              │  Django Pods    │
+                                              └─────────────────┘
+```
+
+---
+
+## 🏗️ Архітектура
+
+| Компонент | Опис |
+|-----------|------|
+| **Terraform** | Інфраструктура як код: VPC, EKS, ECR, RDS, S3 backend |
+| **Jenkins** | CI-сервер, встановлений через Helm, з Kubernetes agents (Kaniko + Git) |
+| **Kaniko** | Збірка Docker-образу без Docker daemon у Kubernetes pod |
+| **Amazon ECR** | Реєстр Docker-образів |
+| **Helm** | Управління Kubernetes-застосунками (django-app chart) |
+| **Argo CD** | GitOps-інструмент для автоматичної синхронізації застосунку |
+| **RDS/Aurora** | База даних PostgreSQL |
+
+---
+
+## 📁 Структура проекту
+
+```text
+devops/
+├── main.tf                    # Root Terraform module
+├── variables.tf               # Змінні (GitHub PAT, AWS credentials)
+├── providers.tf               # AWS, Helm, Kubernetes providers
+├── outputs.tf                 # Вихідні дані інфраструктури
+├── Jenkinsfile                # Jenkins Declarative Pipeline
+├── Dockerfile                 # Django production image
 ├── charts/
-│   └── django-app/          # Custom Helm Chart
-│       ├── templates/
-│       │   ├── configmap.yaml   # Environment variables from Lesson 4
-│       │   ├── deployment.yaml  # Deployment referencing ECR image & envFrom
-│       │   ├── service.yaml     # Service type LoadBalancer
-│       │   └── hpa.yaml         # Horizontal Pod Autoscaler (2 min, 6 max)
+│   └── django-app/            # Helm chart для Django-застосунку
 │       ├── Chart.yaml
-│       └── values.yaml          # Values configuration for image, service & scaling
-├── Dockerfile               # Production multi-stage Docker build for Django
-├── docker-compose.yml       # Local development setup
-├── core/                    # Django application source code
-└── requirements.txt         # Python dependencies
+│       ├── values.yaml        # Тег образу оновлюється Jenkins
+│       ├── secret.yaml
+│       └── templates/
+│           ├── _helpers.tpl
+│           ├── configmap.yaml
+│           ├── deployment.yaml
+│           ├── hpa.yaml
+│           └── service.yaml
+├── modules/
+│   ├── s3-backend/            # S3 bucket + DynamoDB для tfstate
+│   ├── vpc/                   # VPC з public/private subnets
+│   ├── ecr/                   # ECR repository
+│   ├── eks/                   # EKS cluster + node groups
+│   ├── rds/                   # RDS/Aurora PostgreSQL
+│   ├── jenkins/               # Jenkins через Helm + JCasC
+│   │   ├── jenkins.tf
+│   │   ├── values.yaml        # JCasC: Kubernetes cloud + credentials
+│   │   └── variables.tf
+│   └── argo_cd/               # Argo CD через Helm
+│       ├── argo_cd.tf
+│       ├── values.yaml
+│       └── charts/            # Argo CD Application manifest
+│           └── templates/
+│               └── application.yaml
+└── core/                      # Django application source
 ```
 
-# Flexible RDS / Aurora Terraform Module
+---
 
-This module provisions either a **Single Amazon RDS Instance** or an **Amazon Aurora Cluster** based on a single boolean variable (`use_aurora`).
+## 🔧 Передумови
 
-## Features
-- Conditional creation of Single RDS (`aws_db_instance`) or Aurora (`aws_rds_cluster`).
-- Managed `DB Subnet Group` and `Security Group`.
-- Dynamic `Parameter Group` setup according to engine type.
+- AWS CLI (`aws configure`)
+- Terraform ≥ 1.0
+- Helm ≥ 3.0
+- kubectl
+- Docker
+- GitHub Personal Access Token (з правами `repo`)
 
+---
 
-## Usage Example
+## 🚀 Крок 1: Розгортання інфраструктури (Terraform)
 
-### 1. Standard PostgreSQL RDS Instance
-```hcl
-module "rds" {
-  source     = "./modules/rds"
-  
-  name       = "my-app-db"
-  vpc_id     = module.vpc.vpc_id
-  subnet_ids = module.vpc.private_subnet_ids
-  
-  use_aurora     = false
-  engine         = "postgres"
-  engine_version = "15.4"
-  instance_class = "db.t4g.micro"
-  
-  db_name        = "app_db"
-  admin_username = "db_user"
-  admin_password = "SecurePassword123!"
-}
-```
+### 1.1 Ініціалізація
 
-### 2. High-Availability Aurora PostgreSQL Cluster
-```hcl
-module "rds" {
-  source     = "./modules/rds"
-  
-  name       = "my-aurora-cluster"
-  vpc_id     = module.vpc.vpc_id
-  subnet_ids = module.vpc.private_subnet_ids
-  
-  use_aurora     = true
-  engine         = "aurora-postgresql"
-  engine_version = "15.4"
-  instance_class = "db.r6g.large"
-  
-  db_name        = "app_db"
-  admin_username = "db_user"
-  admin_password = "SecurePassword123!"
-}
-```
-
-# End-to-End GitOps Pipeline (Jenkins + Argo CD + EKS)
-
-Project provisions an Amazon EKS cluster with Terraform, installs **Jenkins** and **Argo CD** via Helm, and implements an automated GitOps CI/CD delivery pipeline.
-
-## 🏗 Architecture Overview
-
-```text
-+--------------+        +-------------------+        +----------------+
-|  Developer   | ---->  | Push Code to Git  | ---->  |  Jenkins CI    |
-+--------------+        +-------------------+        +----------------+
-                                                              |
-                                                    (Build Image via Kaniko)
-                                                              v
-+--------------+        +-------------------+        +----------------+
-| Argo CD Sync | <----  | Update Helm Tag   | <----  |  Push to ECR   |
-| to EKS Pods  |        | in Git Repository |        +----------------+
-+--------------+        +-------------------+
-```
-1. Provision Infrastructure with Terraform
 ```bash
-# Initialize Terraform
-terraform init
+# Встановити змінні середовища для AWS credentials
+export AWS_ACCESS_KEY_ID="your-access-key"
+export AWS_SECRET_ACCESS_KEY="your-secret-key"
 
-# Validate Configuration
+# Ініціалізувати Terraform
+terraform init
+```
+
+### 1.2 Перевірка конфігурації
+
+```bash
+# Форматування
+terraform fmt -recursive -check
+
+# Валідація
 terraform validate
 
-# Apply Resources (VPC, EKS, ECR, Jenkins, Argo CD)
-terraform apply -auto-approve
+# План змін
+terraform plan
 ```
 
-2. Verify Jenkins CI Job
-```bash
-# Get the Jenkins external URL & initial admin password:
+### 1.3 Застосування
 
-kubectl get svc -n jenkins
-
-kubectl exec -it svc/jenkins -n jenkins -- cat /var/jenkins_home/secrets/initialAdminPassword
-
-# Open Jenkins dashboard in your browser.
-
-# Create a Pipeline job pointing to your Git repository's Jenkinsfile.
-
-# Run the build. Kaniko will build the image, push it to ECR, and commit the updated IMAGE_TAG to charts/django-app/values.yaml.
-```
-
-3. Verify Argo CD GitOps Deployment
-
-```bash
-# Retrieve Argo CD admin password:
-
-kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d
-
-# Get Argo CD UI LoadBalancer address:
-
-kubectl get svc -n argocd argo-cd-argocd-server
-
-# Open Argo CD UI and verify that the django-app Application is status Synced and Healthy.
-
-# Whenever Jenkins updates the image tag in Git, Argo CD auto-detects changes within 3 minutes and updates running pods in Kubernetes.
-```
-
-# Access Grafana Monitoring Dashboard
-```bash
-kubectl port-forward svc/kube-prometheus-stack-grafana 3000:80 -n monitoring
-```
-
-# Deployment Guide
-Initialize local state
-```bash
-   terraform init
-   ```
-
-Apply infrastructure (VPC, S3, DynamoDB, ECR, EKS)
 ```bash
 terraform apply -auto-approve
 ```
 
-Migrate state to S3 Remote Backend
-```bash
-terraform init -migrate-state
-```
+Це створить:
+- VPC з public/private subnets
+- EKS cluster з node groups
+- ECR repository
+- RDS PostgreSQL
+- Jenkins (через Helm) з Kubernetes cloud
+- Argo CD (через Helm) з Application manifest
 
-Configure Local Kubeconfig
+### 1.4 Налаштування kubeconfig
+
 ```bash
 aws eks update-kubeconfig --region us-east-2 --name lesson-7-eks
 ```
 
-Build & Push Docker Image to ECR
+---
+
+## 🔧 Крок 2: Налаштування Jenkins
+
+### 2.1 Отримати доступ до Jenkins
 
 ```bash
-# Authenticate Docker to AWS ECR
-aws ecr get-login-password --region us-east-2 | docker login --username AWS --password-stdin 164253013547.dkr.ecr.us-east-2.amazonaws.com
+# Отримати LoadBalancer URL
+kubectl get svc -n jenkins
 
-# Build Docker Image
-docker build -t [164253013547.dkr.ecr.us-east-2.amazonaws.com/lesson-7-ecr:latest](https://164253013547.dkr.ecr.us-east-2.amazonaws.com/lesson-7-ecr:latest) .
-
-# Push to ECR
-docker push [164253013547.dkr.ecr.us-east-2.amazonaws.com/lesson-7-ecr:latest](https://164253013547.dkr.ecr.us-east-2.amazonaws.com/lesson-7-ecr:latest)
+# Отримати початковий пароль адміністратора
+kubectl exec -it svc/jenkins -n jenkins -- cat /var/jenkins_home/secrets/initialAdminPassword
 ```
 
-## Authenticate Docker to AWS ECR
+### 2.2 Налаштування credentials
+
+Jenkins автоматично налаштовується через **JCasC** (Configuration as Code) з `modules/jenkins/values.yaml`:
+
+| Credential ID | Тип | Призначення |
+|---------------|-----|-------------|
+| `github-token` | String | GitHub PAT для push змін у Git |
+| `aws-ecr-credentials` | Username/Password | AWS credentials для push в ECR |
+
+### 2.3 Kubernetes Cloud
+
+JCasC автоматично налаштовує **Kubernetes cloud** з pod template `kaniko-git`:
+- Контейнер `kaniko` — збірка Docker-образу
+- Контейнер `git` — оновлення Helm chart у Git
+
+### 2.4 Створення Pipeline job
+
+1. Відкрийте Jenkins UI
+2. **New Item** → назвіть `django-app-pipeline` → виберіть **Pipeline**
+3. У розділі **Pipeline**:
+   - Definition: **Pipeline script from SCM**
+   - SCM: **Git**
+   - Repository URL: `https://github.com/maksberegovoi/devops.git`
+   - Script Path: `Jenkinsfile`
+4. Збережіть та запустіть build
+
+---
+
+## 🔧 Крок 3: Jenkins Pipeline (Jenkinsfile)
+
+`Jenkinsfile` реалізує declarative pipeline з наступними стадіями:
+
+### 3.1 Checkout
+Клонує репозиторій з кодом Django-застосунку.
+
+### 3.2 Build & Push Docker Image to ECR
+- Використовує **Kaniko** для збірки образу без Docker daemon
+- Автентифікується в ECR через AWS credentials
+- Пушить образ з тегом `v1.0.${BUILD_NUMBER}`
+
+```groovy
+/kaniko/executor \
+    --context $(pwd) \
+    --dockerfile $(pwd)/Dockerfile \
+    --destination=${ECR_REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG} \
+    --cache=true
+```
+
+### 3.3 Update Helm Chart Tag in Git
+- Клонує GitOps-репозиторій
+- Оновлює `tag` у `charts/django-app/values.yaml`
+- Комітить та пушить зміни в `main`
+
 ```bash
-aws ecr get-login-password --region us-east-2 | docker login --username AWS --password-stdin 164253013547.dkr.ecr.us-east-2.amazonaws.com
-```
-## Build Docker Image
-```bash
-docker build -t [164253013547.dkr.ecr.us-east-2.amazonaws.com/lesson-7-ecr:latest](https://164253013547.dkr.ecr.us-east-2.amazonaws.com/lesson-7-ecr:latest) .
-```
-## Push to ECR
-```bash
-docker push [164253013547.dkr.ecr.us-east-2.amazonaws.com/lesson-7-ecr:latest](https://164253013547.dkr.ecr.us-east-2.amazonaws.com/lesson-7-ecr:latest)
+sed -i "s|tag: .*|tag: ${IMAGE_TAG}|" values.yaml
+git commit -m "chore: update image tag to ${IMAGE_TAG} [skip ci]"
+git push origin main
 ```
 
-4. Deploy Application via Helm Chart
+---
 
-## Install Helm Release
+## 🔧 Крок 4: Argo CD
+
+### 4.1 Отримати доступ до Argo CD
+
 ```bash
-helm install django-app ./charts/django-app
+# Отримати пароль адміністратора
+kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d
+
+# Отримати LoadBalancer URL
+kubectl get svc -n argocd argo-cd-argocd-server
 ```
 
-## Verify Kubernetes Resources
+### 4.2 Argo CD Application
+
+Argo CD Application (`django-app`) налаштований через Helm chart `modules/argo_cd/charts`:
+
+```yaml
+spec:
+  source:
+    repoURL: https://github.com/maksberegovoi/devops.git
+    targetRevision: main
+    path: charts/django-app
+    helm:
+      valueFiles:
+        - values.yaml
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+```
+
+### 4.3 Автоматична синхронізація
+
+Коли Jenkins оновлює тег образу в `values.yaml` і пушить у Git:
+1. Argo CD виявляє зміни в репозиторії (протягом ~3 хвилин)
+2. Автоматично синхронізує застосунок у кластері
+3. Kubernetes rolling update замінює pod'и з новим образом
+
+---
+
+## 🔄 Повний цикл CI/CD
+
+```text
+1. Developer push code → GitHub
+2. Jenkins pipeline запускається (webhook або вручну)
+3. Kaniko збирає Docker-образ
+4. Образ пушиться в ECR з тегом v1.0.N
+5. Jenkins оновлює tag у charts/django-app/values.yaml
+6. Jenkins комітить та пушить зміни в main
+7. Argo CD виявляє зміни в Git
+8. Argo CD синхронізує застосунок у EKS
+9. Нові pod'и запускаються з новим образом
+```
+
+---
+
+## 🧪 Перевірка
+
+### Перевірка Helm charts
+
+```bash
+helm lint charts/django-app
+helm lint modules/argo_cd/charts
+```
+
+### Перевірка Terraform
+
+```bash
+terraform fmt -recursive -check
+terraform init -backend=false
+terraform validate
+```
+
+### Перевірка застосунку
+
 ```bash
 kubectl get pods
 kubectl get svc
@@ -208,27 +315,35 @@ kubectl get hpa
 kubectl get configmap
 ```
 
+### Перевірка Argo CD
 
-## Helm Chart Features
-Deployment: Pulls image from ECR with envFrom mounting environment variables.
-
-ConfigMap: Stores non-sensitive runtime configurations (DEBUG, ALLOWED_HOSTS, DB_ENGINE).
-
-Service: Type LoadBalancer exposing port 80 externally via AWS ELB.
-
-HPA: Scales pods dynamically from 2 to 6 replicas based on 70% CPU utilization.
-
-## Uninstall Helm Chart to remove AWS Load Balancer
 ```bash
+kubectl -n argocd get applications
+kubectl -n argocd get application django-app -o yaml
+```
+
+---
+
+## 🧹 Очищення
+
+```bash
+# Видалити Helm release
 helm uninstall django-app
-```
 
-## Force delete ECR repository images
-```bash
+# Видалити ECR repository
 aws ecr delete-repository --repository-name lesson-7-ecr --region us-east-2 --force
-```
 
-## Destroy AWS Infrastructure ( optional )
-```bash
+# Знищити всю інфраструктуру
 terraform destroy -auto-approve
 ```
+
+---
+
+## 📚 Документація
+
+- [Jenkins Pipeline](https://www.jenkins.io/doc/book/pipeline/)
+- [Jenkins Configuration as Code](https://www.jenkins.io/projects/jcasc/)
+- [Kaniko](https://github.com/GoogleContainerTools/kaniko)
+- [Argo CD](https://argo-cd.readthedocs.io/)
+- [Helm](https://helm.sh/docs/)
+- [Terraform](https://developer.hashicorp.com/terraform/docs)

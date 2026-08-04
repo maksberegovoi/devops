@@ -56,13 +56,13 @@ module "rds" {
   vpc_id     = module.vpc.vpc_id
   subnet_ids = module.vpc.private_subnet_ids
 
-  use_aurora     = false
+  use_aurora     = var.use_aurora
   engine         = "postgres"
   engine_version = "15"
   instance_class = "db.t4g.micro"
 
   db_name        = "django_db"
-  admin_username = "postgres"
+  admin_username = "db_admin"
   admin_password = var.db_password
 
   allowed_cidr_blocks = var.allowed_cidr_blocks
@@ -75,6 +75,10 @@ module "rds" {
 
 module "jenkins" {
   source = "./modules/jenkins"
+
+  github_token          = var.github_pat
+  aws_access_key_id     = var.aws_access_key_id
+  aws_secret_access_key = var.aws_secret_access_key
 }
 
 module "argo_cd" {
